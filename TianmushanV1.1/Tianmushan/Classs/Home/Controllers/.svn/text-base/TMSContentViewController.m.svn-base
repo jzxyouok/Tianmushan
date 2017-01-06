@@ -1,0 +1,462 @@
+/**************************************************************************
+ *
+ *  Created by shushaoyong on 2016/10/27.
+ *    Copyright © 2016年 踏潮. All rights reserved.
+ *
+ * 项目名称：浙江踏潮-天目山-h5模版制作软件
+ * 版权说明：本软件属浙江踏潮网络科技有限公司所有，在未获得浙江踏潮网络科技有限公司正式授权
+ *           情况下，任何企业和个人，不能获取、阅读、安装、传播本软件涉及的任何受知
+ *           识产权保护的内容。
+ ***************************************************************************/
+
+#import "TMSContentViewController.h"
+#import "TMSBaseViewController.h"
+#import "TianmushanAPI.h"
+#import "TMSHomeCell.h"
+#import "TMSHomeTitleItem.h"
+#import "TMSDetailViewController.h"
+#import "TMSNodataHUD.h"
+#import "TMSHomeMode.h"
+#import "SYLoadingView.h"
+#import "TMSRefreshFooter.h"
+#import "TMSRefreshHeader.h"
+
+
+@interface TMSContentViewController ()<UICollectionViewDataSource,UICollectionViewDelegate,TMSNodataHUDDelegate>
+
+/**是否正在执行加载更多动画*/
+@property(nonatomic,assign)BOOL isAnimating;
+
+/**datas*/
+@property(nonatomic,strong)NSMutableArray *datas;
+
+/**内容视图*/
+@property(nonatomic,weak)UICollectionView *collectionView;
+
+/**加载失败提醒*/
+@property(nonatomic,strong)TMSNodataHUD *nodataHUD;
+
+/**当前页*/
+@property(nonatomic,assign)NSInteger currentPage;
+
+/**总个数*/
+@property(nonatomic,assign)NSInteger totalCount;
+
+/**是否是上拉加载更多*/
+@property(nonatomic,assign)BOOL pullUp;
+
+
+/**缓存文件名*/
+@property(nonatomic,copy)NSString *TMSContentViewControllerCachePath;
+
+@end
+
+@implementation TMSContentViewController
+
+static NSString * const reuseIdentifier = @"TMSHomeCell";
+
+/**
+ *  没有数据 提示视图
+ *
+ *  @return 视图对象
+ */
+- (TMSNodataHUD *)nodataHUD
+{
+    if (!_nodataHUD) {
+        
+        _nodataHUD = [[TMSNodataHUD alloc] initWithFrame:self.view.frame];
+        _nodataHUD.delegate= self;
+        _nodataHUD.hidden = YES;
+        
+    }
+    return _nodataHUD;
+}
+
+/**
+ *  模型数组
+ *
+ *  @return 模型数组
+ */
+- (NSMutableArray *)datas
+{
+    if (!_datas) {
+        
+        _datas = [NSMutableArray array];
+    
+    }
+    return _datas;
+}
+
+/**
+ *  设置当前的控制器对应的名称和分类id
+ *
+ *  @param item <#item description#>
+ */
+- (void)setItem:(TMSHomeTitleItem *)item
+{
+    _item = item;
+    
+    //缓存路径
+    self.TMSContentViewControllerCachePath = [@"TMSContentViewController" stringByAppendingString:item.en];
+    
+    self.title = item.name;
+    
+}
+
+
+/**
+ *  控制器view加载完成
+ */
+- (void)viewDidLoad {
+    
+    [super viewDidLoad];
+    
+    self.currentPage = 1;
+    [self createCollectionView];
+    [self.view addSubview:self.nodataHUD];
+}
+
+/**
+ *  创建内容视图
+ */
+- (void)createCollectionView
+{
+    UICollectionView *collectionView = [[UICollectionView alloc] initWithFrame:CGRectMake(0, 10, SCREEN_WIDTH, SCREEN_HEIGHT-64 - 20) collectionViewLayout:[[TMSContentViewLayout alloc] init]];
+    collectionView.dataSource = self;
+    collectionView.delegate = self;
+    [self.view addSubview:collectionView];
+    self.collectionView = collectionView;
+    self.collectionView.backgroundColor = [UIColor clearColor];
+    self.collectionView.scrollsToTop = NO;
+    
+    self.collectionView.contentInset = UIEdgeInsetsMake(10, 15, 44, 15);
+    self.collectionView.scrollIndicatorInsets = UIEdgeInsetsMake(10, 0, 0, 0);
+    [self.collectionView registerClass:[TMSHomeCell class] forCellWithReuseIdentifier:reuseIdentifier];
+    
+    
+    TMSRefreshHeader *header = [TMSRefreshHeader headerWithRefreshingTarget:self refreshingAction:@selector(loadNewData)];
+    header.arrowView.image = [UIImage imageNamed:@"newRefresh"];
+    header.stateLabel.text = @"下拉加载最新";
+    header.lastUpdatedTimeLabel.hidden = YES;
+    [header setTitle:@"刷新数据中" forState:MJRefreshStateRefreshing];
+    header.stateLabel.textColor = UIColorFromRGB(0xb9b9b9);
+    self.collectionView.mj_header = header;
+    
+    
+    TMSRefreshFooter *footer = [TMSRefreshFooter footerWithRefreshingTarget:self refreshingAction:@selector(loadMoreData)];
+    [footer setTitle:@"没有更多模板了" forState:MJRefreshStateNoMoreData];
+    footer.stateLabel.textColor = UIColorFromRGB(0xb9b9b9);
+    footer.stateLabel.font = [UIFont systemFontOfSize:13];
+    self.collectionView.mj_footer = footer;
+    
+    [self loadData];
+}
+
+
+
+
+/**
+ *  加载最新数据
+ */
+- (void)loadNewData
+{
+    self.pullUp = NO;
+    self.currentPage = 1;
+    [self.collectionView.mj_header beginRefreshing];
+    
+    //拼接url
+    NSString *url = [[KRAPI_home stringByAppendingString:self.item.en?self.item.en:@""] stringByAppendingString:[NSString stringWithFormat:@"/%zd",self.currentPage]];
+    
+    //请求数据
+    [[APIAgent sharedInstance] getFromUrl:url params:nil withCompletionBlockWithSuccess:^(NSDictionary *responseObject) {
+        
+        //将结果集转换为json字符串 写入文件中
+        NSString *json = [NSString jsonWithDictionary:responseObject];
+        
+        [json writeToFile:[self.TMSContentViewControllerCachePath  cachePath] atomically:YES encoding:NSUTF8StringEncoding error:nil];
+        
+        
+        [self loadReportDatas:responseObject];
+        
+    } withFailure:^(NSString *error) {
+        
+        [SYLoadingView dismiss];
+        
+        [self.collectionView.mj_header endRefreshing];
+        
+        //加载缓存数据
+        NSString *cacheJson = [NSString stringWithContentsOfFile:[self.TMSContentViewControllerCachePath  cachePath] encoding:NSUTF8StringEncoding error:nil];
+        
+        //有缓存加载缓存数据
+        if (cacheJson) {
+            NSDictionary *responseObject = [NSString dictionaryWithJson:cacheJson];
+            [self loadReportDatas:responseObject];
+        }
+        
+        
+        
+    }];
+
+    
+}
+
+
+
+/**
+ *  加载更多数据
+ */
+- (void)loadMoreData
+{
+    self.pullUp = YES;
+    [self loadData];
+}
+
+
+/**
+ *  加载数据
+ */
+- (void)loadData
+{
+    
+    if (!self.pullUp) { //如果是下拉刷新 设置页数位1
+        [SYLoadingView showLoadingView:self.collectionView type:loadingViewCircle offset:CGSizeMake(0, -64)];
+        self.currentPage = 1;
+    }else{
+        self.currentPage++;
+    }
+    
+    //加载缓存数据
+    NSString *cacheJson = [NSString stringWithContentsOfFile:[self.TMSContentViewControllerCachePath  cachePath] encoding:NSUTF8StringEncoding error:nil];
+    
+    //有缓存加载缓存数据
+    if (cacheJson) {
+        NSDictionary *responseObject = [NSString dictionaryWithJson:cacheJson];
+        [self loadReportDatas:responseObject];
+    }
+    
+
+    //拼接url
+    NSString *url = [[KRAPI_home stringByAppendingString:self.item.en?self.item.en:@""] stringByAppendingString:[NSString stringWithFormat:@"/%zd",self.currentPage]];
+    
+    //请求数据
+    [[APIAgent sharedInstance] getFromUrl:url params:nil withCompletionBlockWithSuccess:^(NSDictionary *responseObject) {
+        
+       
+        //如果是上拉加载更多 不需要缓存
+        if (self.pullUp) {
+            
+            [self loadReportDatas:responseObject];
+            
+            return;
+        }
+        
+        //判断当前请求的数据是否和缓存中的数据一样
+        NSString *newJson = [NSString jsonWithDictionary:responseObject];
+        
+        if (![cacheJson isEqualToString:newJson]) {
+            
+            //将结果集转换为json字符串 写入文件中
+            NSString *json = [NSString jsonWithDictionary:responseObject];
+            
+            [json writeToFile:[self.TMSContentViewControllerCachePath  cachePath] atomically:YES encoding:NSUTF8StringEncoding error:nil];
+            
+            [self loadReportDatas:responseObject];
+            
+        }
+
+        
+    } withFailure:^(NSString *error) {
+        
+        
+        [self.collectionView.mj_header endRefreshing];
+        [self.collectionView.mj_footer endRefreshingWithNoMoreData];
+        
+        if (self.datas.count<=0) {
+            _nodataHUD.desLabel.text = KRAPI_NOdataErrorMsg;
+            _nodataHUD.hidden = NO;
+        }
+        
+        [SYLoadingView dismiss];
+
+    }];
+    
+    
+    
+}
+
+
+- (void)loadReportDatas:(NSDictionary*)responseObject
+{
+
+        //如果没有数据 就不处理
+        if ([responseObject[@"rst"] isKindOfClass:[NSNull class]]) {
+
+            if (self.datas.count<=0) {
+                
+                [self.collectionView.mj_footer endRefreshing];
+                
+                [_nodataHUD noDataHUD:KRAPI_CatelogNOdataErrorMsg image:nil];
+                _nodataHUD.hidden = NO;
+                
+            }else {
+                
+                [self.collectionView.mj_footer endRefreshingWithNoMoreData];
+            }
+                
+
+            [SYLoadingView dismiss];
+
+
+            return;
+        }
+
+
+        //上拉加载
+        if (self.pullUp) {
+
+                if ([(NSArray*)responseObject[@"rst"][@"templates"] count] > 0) {
+                    
+                    NSMutableArray *temp = [NSMutableArray array];
+                    for (NSDictionary *dict in responseObject[@"rst"][@"templates"]) {
+                        TMSHomeMode *model = [TMSHomeMode modalWithDict:dict];
+                        [temp addObject:model];
+                    }
+                    [self.datas addObjectsFromArray:temp];
+                    
+                    [self.collectionView reloadData];
+                    
+                    if (self.datas.count >= self.totalCount) {
+                        [self.collectionView.mj_footer endRefreshingWithNoMoreData];
+                    }else{
+                        [self.collectionView.mj_footer endRefreshing];
+                    }
+                    
+                }else{
+                    
+                    [self.collectionView.mj_footer endRefreshingWithNoMoreData];
+                    
+                }
+
+                [SYLoadingView dismiss];
+
+
+        }else{ //首次刷新
+
+        self.pullUp = NO;
+
+        self.totalCount = [responseObject[@"count"] longLongValue];
+
+        //如果没有数据 就不处理
+        if (![responseObject[@"rst"][@"templates"] isKindOfClass:[NSNull class]]) {
+            
+            
+            if ([(NSArray*)responseObject[@"rst"][@"templates"] count] > 0) {
+                
+                
+                [self.nodataHUD removeFromSuperview];
+                self.nodataHUD = nil;
+                
+                //删除之前的数据
+                [self.datas removeAllObjects];
+                
+                for (NSDictionary *dict in responseObject[@"rst"][@"templates"]) {
+                    
+                    TMSHomeMode *model = [TMSHomeMode modalWithDict:dict];
+                    [self.datas addObject:model];
+                }
+                
+                
+                [SYLoadingView dismiss];
+
+                [self.collectionView.mj_header endRefreshing];
+                [self.collectionView reloadData];
+                
+                if (self.datas.count == self.totalCount) {
+                    [self.collectionView.mj_footer endRefreshingWithNoMoreData];
+                }else{
+                    [self.collectionView.mj_footer endRefreshing];
+                }
+                
+                
+                
+            }else{
+                
+                [SYLoadingView dismiss];
+
+                [self.collectionView.mj_header endRefreshing];
+                [_nodataHUD noDataHUD:KRAPI_CatelogNOdataErrorMsg image:nil];
+                _nodataHUD.hidden = NO;
+                
+            }
+            
+        }else{
+            
+            [SYLoadingView dismiss];
+
+            [self.collectionView.mj_header endRefreshing];
+            [self.collectionView.mj_footer endRefreshing];
+            [_nodataHUD noDataHUD:KRAPI_CatelogNOdataErrorMsg image:nil];
+            _nodataHUD.hidden = NO;
+        }
+
+    }
+
+}
+
+
+#pragma mark datasource
+- (NSInteger)collectionView:(UICollectionView *)collectionView numberOfItemsInSection:(NSInteger)section {
+   
+    return self.datas.count;
+
+}
+
+- (UICollectionViewCell *)collectionView:(UICollectionView *)collectionView cellForItemAtIndexPath:(NSIndexPath *)indexPath {
+    
+    TMSHomeCell *cell = [collectionView dequeueReusableCellWithReuseIdentifier:reuseIdentifier forIndexPath:indexPath];
+    cell.homeMode = self.datas[indexPath.row];
+    return cell;
+}
+
+- (void)collectionView:(UICollectionView *)collectionView didSelectItemAtIndexPath:(NSIndexPath *)indexPath
+{
+    
+    TMSHomeMode *mode = self.datas[indexPath.row];
+    //如果是相册类目
+    if ([self.item.en isEqualToString:@"photo"]) {
+        mode.photoCategory = YES;
+    }else{
+        mode.photoCategory = NO;
+    }
+    TMSDetailViewController *detail = [[TMSDetailViewController alloc] init];
+    detail.url = mode.h5Url;
+    detail.watchTemplate = YES;
+    detail.mode = mode;
+    [self.navigationController pushViewController:detail animated:YES];
+}
+
+
+
+#pragma mark TMSNodataHUDDelegate
+- (void)nodataHUDDidClicked:(TMSNodataHUD *)view
+{
+    self.pullUp = NO;
+    [self loadData];
+}
+
+@end
+
+@implementation TMSContentViewLayout
+
+- (void)prepareLayout
+{
+    CGFloat margin = 15;
+    self.minimumLineSpacing = margin;
+    self.minimumInteritemSpacing = margin;
+    CGFloat itemW = (SCREEN_WIDTH - 3*margin)*0.5;
+    self.itemSize = CGSizeMake(itemW, itemW+80);
+    
+}
+
+
+@end

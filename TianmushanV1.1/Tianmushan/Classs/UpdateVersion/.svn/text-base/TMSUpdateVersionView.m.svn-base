@@ -1,0 +1,142 @@
+/**************************************************************************
+ *
+ *  Created by shushaoyong on 2016/10/31.
+ *    Copyright © 2016年 踏潮. All rights reserved.
+ *
+ * 项目名称：浙江踏潮-天目山-h5模版制作软件
+ * 版权说明：本软件属浙江踏潮网络科技有限公司所有，在未获得浙江踏潮网络科技有限公司正式授权
+ *           情况下，任何企业和个人，不能获取、阅读、安装、传播本软件涉及的任何受知
+ *           识产权保护的内容。
+ *
+ ***************************************************************************/
+
+#import "TMSUpdateVersionView.h"
+#import "TianmushanAPI.h"
+
+@interface TMSUpdateVersionView()
+
+/**<#注释#>*/
+@property(nonatomic,weak) UIView *contentV;
+
+/**<#注释#>*/
+@property(nonatomic,weak)UILabel *titleLabel;
+
+/**<#注释#>*/
+@property(nonatomic,weak) UILabel *desc;
+
+/**<#注释#>*/
+@property(nonatomic,weak) UIButton *update;
+
+/**<#注释#>*/
+@property(nonatomic,weak) UIButton *skip;
+
+@end
+
+@implementation TMSUpdateVersionView
+
+- (instancetype)initWithFrame:(CGRect)frame
+{
+    if (self = [super initWithFrame:frame]) {
+        
+        self.backgroundColor = [[UIColor blackColor] colorWithAlphaComponent:0.3];
+        
+        UIView *contentV = [[UIView alloc] init];
+        contentV.backgroundColor = GLOBALCOLOR;
+        contentV.layer.cornerRadius = 2;
+        contentV.layer.masksToBounds = YES;
+        [self addSubview:contentV];
+        self.contentV = contentV;
+        
+        UILabel *titleLabel = [[UILabel alloc] init];
+        titleLabel.text = @"新版本提醒";
+        titleLabel.font = [UIFont systemFontOfSize:18];
+        titleLabel.textAlignment = NSTextAlignmentCenter;
+        [contentV addSubview:titleLabel];
+        self.titleLabel = titleLabel;
+        
+        UILabel *desc = [[UILabel alloc] init];
+        desc.text = @"dsjfhjkdshfkjsdhfkjds,hkfjdhsfkjdshfd";
+        desc.font = [UIFont systemFontOfSize:14];
+        desc.textColor = [UIColor darkGrayColor];
+        [contentV addSubview:desc];
+        self.desc = desc;
+        
+        UIButton *update = [[UIButton alloc] init];
+        update.titleLabel.font = [UIFont systemFontOfSize:14];
+        [update setTitle:@"更新" forState:UIControlStateNormal];
+        [update setTitleColor:[UIColor redColor] forState:UIControlStateNormal];
+        [update addTarget:self action:@selector(updateBtnClick) forControlEvents:UIControlEventTouchUpInside];
+        [contentV addSubview:update];
+        self.update = update;
+        
+        
+        UIButton *skip = [[UIButton alloc] init];
+        skip.titleLabel.font = [UIFont systemFontOfSize:14];
+        [skip setTitle:@"跳过" forState:UIControlStateNormal];
+        [skip setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
+        [skip addTarget:self action:@selector(skipBtnClick) forControlEvents:UIControlEventTouchUpInside];
+        [contentV addSubview:skip];
+        self.skip = skip;
+        
+    }
+    return self;
+}
+
+
+- (void)setVerison:(TMSUpdateVersion *)verison
+{
+    _verison = verison;
+    
+    self.desc.text = verison.desc;
+    
+}
+
+#pragma mark event
+
+/**
+ *  更新这个版本
+ */
+- (void)updateBtnClick
+{
+    [[UIApplication sharedApplication] openURL:[NSURL URLWithString:self.verison.downloadurl]];
+}
+
+/**
+ *  跳过这个版本
+ */
+- (void)skipBtnClick
+{
+    [self removeFromSuperview];
+}
+
+
+
+- (void)layoutSubviews
+{
+    [super layoutSubviews];
+    
+    CGFloat width = self.frame.size.width;
+    CGFloat height = self.frame.size.height;
+    
+    CGFloat contenth = height*0.5;
+    CGFloat contetw = width*0.8;
+    self.contentV.frame = CGRectMake(0, 0, contetw , contenth);
+    self.contentV.center = self.center;
+    
+    self.titleLabel.frame = CGRectMake(0, 20, contetw, 20);
+    self.desc.frame = CGRectMake(10, CGRectGetMaxY(self.titleLabel.frame)+10, contetw-20, contenth *0.5);
+    
+    CGFloat btnw = 80;
+    CGFloat btnh = 20;
+    self.skip.frame = CGRectMake(20, contenth - btnh -10, btnw, btnh);
+    self.update.frame = CGRectMake(contetw - btnw - btnh, contenth - btnh -10, btnw, btnh);
+
+    
+}
+
+@end
+
+
+@implementation TMSUpdateVersion
+
+@end

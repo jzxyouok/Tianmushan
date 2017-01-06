@@ -1,0 +1,38 @@
+PODS:
+  - AFNetworking (3.1.0):
+    - AFNetworking/NSURLSession (= 3.1.0)
+    - AFNetworking/Reachability (= 3.1.0)
+    - AFNetworking/Security (= 3.1.0)
+    - AFNetworking/Serialization (= 3.1.0)
+    - AFNetworking/UIKit (= 3.1.0)
+  - AFNetworking/NSURLSession (3.1.0):
+    - AFNetworking/Reachability
+    - AFNetworking/Security
+    - AFNetworking/Serialization
+  - AFNetworking/Reachability (3.1.0)
+  - AFNetworking/Security (3.1.0)
+  - AFNetworking/Serialization (3.1.0)
+  - AFNetworking/UIKit (3.1.0):
+    - AFNetworking/NSURLSession
+  - libqrencode (3.4.2)
+  - MJRefresh (2.5.0)
+  - SDAutoLayout (2.1.7)
+  - Toast (2.4)
+
+DEPENDENCIES:
+  - AFNetworking (~> 3.0)
+  - libqrencode (~> 3.4.2)
+  - MJRefresh (~> 2.5.0)
+  - SDAutoLayout (~> 2.1.7)
+  - Toast (~> 2.4)
+
+SPEC CHECKSUMS:
+  AFNetworking: 5e0e199f73d8626b11e79750991f5d173d1f8b67
+  libqrencode: 43dc34b89af83ea4b07c409cd8e09c87aa3a1c9f
+  MJRefresh: 4bce3b592ae052ff89473b2907278bf8a80abdd3
+  SDAutoLayout: e9b36d04b8c0b504762a04d76fbbe5108944297a
+  Toast: 0773b8fc0e97352ca6054517bec7ebdd4110029d
+
+PODFILE CHECKSUM: 0f159f37f5e143a1989b55b16bac29772bb7b436
+
+COCOAPODS: 1.0.1

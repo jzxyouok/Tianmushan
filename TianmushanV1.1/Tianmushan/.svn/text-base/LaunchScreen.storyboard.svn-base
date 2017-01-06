@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="9531" systemVersion="16B2555" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES">
+    <dependencies>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="9529"/>
+        <capability name="Constraints to layout margins" minToolsVersion="6.0"/>
+    </dependencies>
+    <scenes>
+        <!--View Controller-->
+        <scene sceneID="zB7-AN-qhE">
+            <objects>
+                <viewController id="5U6-BT-upS" sceneMemberID="viewController">
+                    <layoutGuides>
+                        <viewControllerLayoutGuide type="top" id="arj-yF-TQZ"/>
+                        <viewControllerLayoutGuide type="bottom" id="kjf-fX-eLZ"/>
+                    </layoutGuides>
+                    <view key="view" contentMode="scaleToFill" id="R7y-gP-OYW">
+                        <rect key="frame" x="0.0" y="0.0" width="320" height="568"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <subviews>
+                            <imageView userInteractionEnabled="NO" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="LaunchImageBg" translatesAutoresizingMaskIntoConstraints="NO" id="PPC-OS-SKp">
+                                <rect key="frame" x="0.0" y="0.0" width="320" height="568"/>
+                            </imageView>
+                        </subviews>
+                        <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
+                        <constraints>
+                            <constraint firstAttribute="trailing" secondItem="PPC-OS-SKp" secondAttribute="trailing" id="0CC-fW-ehe"/>
+                            <constraint firstItem="PPC-OS-SKp" firstAttribute="leading" secondItem="R7y-gP-OYW" secondAttribute="leading" id="WX4-KV-ibn"/>
+                            <constraint firstItem="kjf-fX-eLZ" firstAttribute="top" secondItem="PPC-OS-SKp" secondAttribute="bottom" id="jZh-bS-v6l"/>
+                            <constraint firstItem="PPC-OS-SKp" firstAttribute="top" secondItem="arj-yF-TQZ" secondAttribute="bottom" id="pGS-CA-tLO"/>
+                            <constraint firstItem="PPC-OS-SKp" firstAttribute="top" secondItem="R7y-gP-OYW" secondAttribute="topMargin" id="wXG-l0-bH8"/>
+                        </constraints>
+                        <variation key="default">
+                            <mask key="constraints">
+                                <exclude reference="pGS-CA-tLO"/>
+                            </mask>
+                        </variation>
+                    </view>
+                    <simulatedScreenMetrics key="simulatedDestinationMetrics" type="retina4"/>
+                </viewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="Wkc-kw-m0e" userLabel="First Responder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="271" y="393"/>
+        </scene>
+    </scenes>
+    <resources>
+        <image name="LaunchImageBg" width="621" height="1104"/>
+    </resources>
+</document>

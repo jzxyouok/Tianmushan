@@ -1,0 +1,755 @@
+/**************************************************************************
+ *
+ *  Created by shushaoyong on 2016/10/27.
+ *    Copyright © 2016年 踏潮. All rights reserved.
+ *
+ * 项目名称：浙江踏潮-天目山-h5模版制作软件
+ * 版权说明：本软件属浙江踏潮网络科技有限公司所有，在未获得浙江踏潮网络科技有限公司正式授权
+ *           情况下，任何企业和个人，不能获取、阅读、安装、传播本软件涉及的任何受知
+ *           识产权保护的内容。
+ ***************************************************************************/
+
+#import "SYTabBarViewController.h"
+#import "TianmushanAPI.h"
+
+#define SYScreenW [UIScreen mainScreen].bounds.size.width
+#define SYScreenH [UIScreen mainScreen].bounds.size.height
+
+
+#define normalTitleFont [UIFont systemFontOfSize:19]
+#define normalUnderLineH 2 //默认下划线的高度
+
+@interface SYTabBarViewController ()<UIScrollViewDelegate>
+
+/** 所以标题数组 */
+@property (nonatomic, strong) NSMutableArray *titleLabels;
+
+/** 所以标题宽度数组 */
+@property (nonatomic, strong) NSMutableArray *titleWidths;
+
+/** 总的标题的宽度 */
+@property (nonatomic, assign) CGFloat totalWidth;
+
+/** 第一个标题的宽度 */
+@property (nonatomic, assign) CGFloat firstWidth;
+
+/** 最后一个标题的宽度 */
+@property (nonatomic, assign) CGFloat lastWidth;
+
+/** 记录上一次内容滚动视图偏移量 */
+@property (nonatomic, assign) CGFloat lastOffsetX;
+
+/** 记录是否点击 */
+@property (nonatomic, assign) BOOL isClickTitle;
+
+/** 记录是否在动画 */
+@property (nonatomic, assign) BOOL isAniming;
+
+/* 是否初始化 */
+@property (nonatomic, assign) BOOL isInitial;
+
+/** 计算上一次选中角标 */
+@property (nonatomic, assign) NSInteger selIndex;
+
+//记录当前选中的标题label
+@property(nonatomic,weak)UILabel *selectedLael;
+
+/**底部线条*/
+@property(nonatomic,weak) UIView *titleBottomLine;
+
+
+@end
+
+@implementation SYTabBarViewController
+
+#pragma mark - 初始化方法
+//如果当前类是通过代码创建的会进入这个方法
+- (instancetype)init
+{
+    if (self = [super init]) {
+        [self initial];
+    }
+    return self;
+}
+
+//如果当前累是通过xib或者storaboard创建的会进入这个方法
+- (void)awakeFromNib
+{
+    [self initial];
+}
+
+//初始化方法
+- (void)initial
+{
+    self.isShowUnderLine = YES; //默认显示下划线
+    
+    self.titleFont = normalTitleFont ; //默认标题大小15
+    
+    self.titleMargin = 20; //标题之间的默认间距
+    
+    self.firstMargin = 8; //第一个标题距离屏幕左边间距
+    
+    self.lastMargin = 8; //最后一个标题距离屏幕右边的间距
+    
+    self.titleMinCount = 6; //6个的时候 均分
+    
+    self.titleHeight = 50; //默认标题控件的高度
+    
+    self.underLineH = normalUnderLineH; //默认下划线的高度
+    
+    self.normalTitleBgColor = [UIColor whiteColor];//默认标题的背景颜色
+    
+    self.underLineType = UnderLineTypeBottom;//默认显示在最底部
+    
+    self.isDelayScroll = NO; //是否延迟滚动
+    
+    self.automaticallyAdjustsScrollViewInsets = NO; //不要为scrollview添加额外的滚动区域
+}
+
+#pragma mark - 懒加载
+
+- (NSMutableArray *)titleLabels
+{
+    if (_titleLabels == nil) {
+        _titleLabels = [NSMutableArray array];
+    }
+    return _titleLabels;
+}
+
+
+- (NSMutableArray *)titleWidths
+{
+    if (_titleWidths == nil) {
+        _titleWidths = [NSMutableArray array];
+    }
+    return _titleWidths;
+}
+
+- (UIColor *)normalColor
+{
+
+    if (_normalColor == nil){
+        _normalColor = [UIColor blackColor];
+    }
+    
+    
+    return _normalColor;
+}
+
+- (UIColor *)selectedColor
+{
+    if (_selectedColor == nil) _selectedColor = [UIColor blueColor];
+    
+    return _selectedColor;
+}
+
+
+- (UIView *)underLine
+{
+    if (_underLine == nil) {
+        
+        UIView *underLineView = [[UIView alloc] init];
+        
+        underLineView.backgroundColor = _underLineColor?_underLineColor:[UIColor redColor ];
+        
+        [self.titleScrollView addSubview:underLineView];
+        
+        _underLine = underLineView;
+        
+    }
+    return _isShowUnderLine?_underLine : nil;
+}
+
+
+- (UIScrollView *)titleScrollView
+{
+    if (_titleScrollView == nil) {
+        
+        UIScrollView *titleScrollView = [[UIScrollView alloc] init];
+        titleScrollView.backgroundColor = _titleScrollViewColor?_titleScrollViewColor:[UIColor colorWithWhite:1 alpha:0.3];
+        titleScrollView.showsHorizontalScrollIndicator = NO;
+        titleScrollView.showsVerticalScrollIndicator = NO;
+        titleScrollView.contentInset = UIEdgeInsetsMake(0, 0, 0, 0);
+        
+        [self.contentView addSubview:titleScrollView];
+        
+        _titleScrollView = titleScrollView;
+        
+    }
+    return _titleScrollView;
+}
+
+- (UIScrollView *)contentScrollView
+{
+    if (_contentScrollView == nil) {
+        
+        // 创建布局
+        UIScrollView *contentScrollView = [[UIScrollView alloc] init];
+        _contentScrollView = contentScrollView;
+        _contentScrollView.backgroundColor = [UIColor whiteColor];
+        // 设置内容滚动视图
+        _contentScrollView.pagingEnabled = YES;
+        _contentScrollView.showsHorizontalScrollIndicator = NO;
+        _contentScrollView.bounces = NO;
+        _contentScrollView.delegate = self;
+        [self.contentView insertSubview:contentScrollView belowSubview:self.titleScrollView];
+    }
+    
+    return _contentScrollView;
+}
+
+- (UIView *)contentView
+{
+    if (_contentView == nil) {
+        
+        UIView *contentView = [[UIView alloc] init];
+        contentView.backgroundColor = [UIColor whiteColor];
+        _contentView = contentView;
+        [self.view addSubview:contentView];
+        
+    }
+    
+    return _contentView;
+}
+
+
+#pragma mark 设置下标
+- (void)setIsShowUnderLine:(BOOL)isShowUnderLine
+{
+    _isShowUnderLine = isShowUnderLine;
+}
+
+#pragma mark 设置标题的背景颜色
+- (void)setTitleScrollViewColor:(UIColor *)titleScrollViewColor
+{
+    _titleScrollViewColor = titleScrollViewColor;
+    
+    self.titleScrollView.backgroundColor = titleScrollViewColor;
+}
+
+
+#pragma mark 标题透明
+
+#pragma mark - view load
+
+
+- (void)viewDidLayoutSubviews
+{
+    [super viewDidLayoutSubviews];
+    
+    CGFloat contentY = self.navigationController?SYTabBarH : [UIApplication sharedApplication].statusBarFrame.size.height;
+    CGFloat contentW = SYScreenW;
+    CGFloat contentH = SYScreenH - contentY;
+    
+    // 设置内容的尺寸
+    if (self.contentView.height == 0) {
+        self.contentView.frame = CGRectMake(0, 0, contentW, contentH);
+    }
+    
+    // 设置标题尺寸
+    CGFloat titleH = self.titleHeight;
+    self.titleScrollView.frame = CGRectMake(0, 0, contentW, titleH);
+    self.titleScrollView.scrollsToTop = NO;
+    
+    // 设置内容滚动视图frame
+    CGFloat contentScrollY = CGRectGetMaxY(self.titleScrollView.frame);
+    self.contentScrollView.frame =CGRectMake(0, contentScrollY, contentW, contentH-contentScrollY);
+    self.contentScrollView.scrollsToTop = NO;
+    
+    
+    //底部的线条
+    UIView *titleBottomLine = [[UIView alloc] init];
+    titleBottomLine.frame = CGRectMake(0,self.titleHeight-0.2 ,contentW, 1);
+    titleBottomLine.backgroundColor = UIColorFromRGB(0XD0D0D0);
+    [self.view insertSubview:titleBottomLine belowSubview:self.titleScrollView];
+    self.titleBottomLine = titleBottomLine;
+    
+  
+    
+}
+
+#pragma mark 重新加载数据
+- (void)reload
+{
+    //删除之前的数据
+    [self.titleLabels removeAllObjects];
+    [self.titleWidths removeAllObjects];
+    
+    //重新设置标题和布局
+    [self setUpTitleWidth];
+    [self setUpAllTitle];
+  
+}
+
+
+#pragma mark 控制器的view即将显示的时候调用
+- (void)viewWillAppear:(BOOL)animated
+{
+    [super viewWillAppear:animated];
+    
+    //判断是否被加载
+    if (_isInitial == NO) {
+        
+        _isInitial = YES;
+        
+        //设置初始化操作
+        self.contentScrollView.backgroundColor = self.view.backgroundColor;
+        
+        if (self.childViewControllers.count == 0) return;
+        
+        //获取所有标题的宽度 根据文字的内容多少得出宽度
+        [self setUpTitleWidth];
+        
+        //设置所有的标题
+        [self setUpAllTitle];
+        
+    }
+    
+    
+}
+
+#pragma mark - 添加标题方法
+// 计算所有标题宽度
+- (void)setUpTitleWidth
+{
+    //获取所有的标题
+    NSArray *titles = [self.childViewControllers valueForKeyPath:@"title"];
+    
+    CGFloat totalWidth = 0;
+    
+    // 计算所有标题的宽度
+    
+    for (int i = 0 ; i<titles.count ; i++) {
+        NSString *title = titles[i];
+        CGRect titleBounds = [title boundingRectWithSize:CGSizeMake(MAXFLOAT, 0) options:NSStringDrawingUsesLineFragmentOrigin attributes:@{NSFontAttributeName:self.titleFont?self.titleFont:normalTitleFont} context:nil];
+        
+        CGFloat width = titleBounds.size.width;
+        
+        [self.titleWidths addObject:@(width)];
+        
+        totalWidth += width;
+        
+    }
+    
+    self.totalWidth = totalWidth;
+    
+}
+
+// 设置所有标题
+- (void)setUpAllTitle
+{
+    
+    //获取子控制器数量
+    NSUInteger count = self.childViewControllers.count;
+    
+    
+    CGFloat labelW = 60;
+    CGFloat labelH = self.titleHeight*0.8;
+    CGFloat labelY = (self.titleHeight - labelH)*0.5;
+    
+    // 添加所有的标题
+    for (int i = 0; i < count; i++) {
+        
+        UIViewController *vc = self.childViewControllers[i];
+        UILabel *label = [[UILabel alloc] init];
+        label.userInteractionEnabled = YES;
+        label.tag = i;
+        label.backgroundColor = [UIColor clearColor];
+        label.textColor = self.normalColor;
+        label.textAlignment = NSTextAlignmentCenter;
+        label.highlightedTextColor = self.selectedColor;
+        label.font = self.titleFont?self.titleFont:normalTitleFont;
+        label.text = vc.title;
+        label.frame = CGRectMake(i*labelW, labelY, labelW, labelH);
+        
+        
+        UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(titleClick:)];
+        [label addGestureRecognizer:tap];
+        [self.titleLabels addObject:label];
+        [_titleScrollView addSubview:label];
+        
+        if (i == 0) {
+            [self titleClick:tap];
+        }
+        
+    }
+    
+    // 设置标题滚动范围
+    UILabel *lastLabel = self.titleLabels.lastObject;
+    _titleScrollView.contentSize = CGSizeMake(CGRectGetMaxX(lastLabel.frame), 0);
+    _titleScrollView.showsHorizontalScrollIndicator = NO;
+    _contentScrollView.contentSize = CGSizeMake(count * SYScreenW, 0);
+    
+}
+
+// 获取两个标题按钮宽度差值
+- (CGFloat)widthDeltaWithRightLabel:(UILabel *)rightLabel leftLabel:(UILabel *)leftLabel
+{
+    
+    CGRect titleBoundsR = [rightLabel.text boundingRectWithSize:CGSizeMake(MAXFLOAT, 0) options:NSStringDrawingUsesLineFragmentOrigin attributes:@{NSFontAttributeName:self.titleFont} context:nil];
+    
+    CGRect titleBoundsL = [leftLabel.text boundingRectWithSize:CGSizeMake(MAXFLOAT, 0) options:NSStringDrawingUsesLineFragmentOrigin attributes:@{NSFontAttributeName:self.titleFont} context:nil];
+    
+    return titleBoundsR.size.width - titleBoundsL.size.width;
+    
+}
+
+// 设置下标偏移
+- (void)setUpUnderLineOffset:(CGFloat)offsetX rightLabel:(UILabel *)rightLabel leftLabel:(UILabel *)leftLabel
+{
+    if (_isClickTitle) return;
+    
+    // 获取两个标题中心点距离
+    CGFloat centerDelta = rightLabel.x - leftLabel.x;
+    
+    // 标题宽度差值
+    CGFloat widthDelta = [self widthDeltaWithRightLabel:rightLabel leftLabel:leftLabel];
+    
+    // 获取移动距离
+    CGFloat offsetDelta = offsetX - _lastOffsetX;
+    
+    // 计算当前下划线偏移量
+    CGFloat underLineTransformX = offsetDelta * centerDelta / SYScreenW;
+    
+    // 宽度递增偏移量
+    CGFloat underLineWidth = offsetDelta * widthDelta / SYScreenW;
+
+
+    self.underLine.width += underLineWidth;
+
+    //偏移动画
+    [UIView animateWithDuration:0.25 animations:^{
+            
+        self.underLine.x += underLineTransformX;
+        
+    }];
+    
+
+
+}
+
+#pragma mark 显示对应的控制器
+- (void)displayViewController:(NSInteger)index
+{
+    // 内容滚动视图滚动到对应位置
+    CGFloat offsetX = index * SYScreenW;
+    UIViewController *vc = self.childViewControllers[index];
+    if (vc.view.superview) return;// 如果控制器的view已经加载 就不需要在继续add
+    vc.view.frame= CGRectMake(offsetX, 0, self.contentScrollView.width, self.contentScrollView.height);
+    [self.contentScrollView addSubview:vc.view];
+    
+}
+
+#pragma mark - 标题点击处理
+// 标题按钮点击
+- (void)titleClick:(UITapGestureRecognizer *)tap
+{
+    // 记录是否点击标题
+    _isClickTitle = YES;
+    
+    // 获取对应标题label
+    UILabel *label = (UILabel *)tap.view;
+    
+    // 获取当前角标
+    NSInteger i = label.tag;
+    
+    // 选中label
+    [self selectLabel:label];
+    
+    // 内容滚动视图滚动到对应位置
+    CGFloat offsetX = i * SYScreenW;
+    
+    self.contentScrollView.contentOffset = CGPointMake(offsetX, 0);
+    
+    // 记录上一次偏移量
+    _lastOffsetX = offsetX;
+    
+    // 显示对应的控制器
+    [self displayViewController:i];
+    
+    UIViewController *vc = self.childViewControllers[i];
+
+    // 判断控制器的view有没有加载
+    if (vc.view) {
+        
+        // 发出通知点击标题通知
+        [[NSNotificationCenter defaultCenter] postNotificationName:SYTabBarViewControllerDidFinshNote  object:vc];
+        
+        //如果当前点击的标题和上一次选中的标题是同一个 就说明是重复点击 这个时候发出重复点击标题通知
+        if (_selIndex == i) {
+            [[NSNotificationCenter defaultCenter] postNotificationName:SYTabBarViewControllerRepeatClickTitleNote object:vc];
+        }
+    }
+    
+    
+    //记录当前选中的是哪一个标题
+    _selIndex = i;
+    
+    // 点击事件处理完成
+    _isClickTitle = NO;
+}
+
+#pragma mark 选中一标题label
+- (void)selectLabel:(UILabel *)label
+{
+    self.selectedLael.highlighted = NO;
+//    self.selectedLael.transform = CGAffineTransformIdentity;
+
+    label.highlighted = YES;
+//    label.transform = CGAffineTransformMakeScale(1.2, 1.2);
+    
+    
+    //当所有的标题宽度大于屏幕宽度的时候才需要设置标题居中
+    if (self.childViewControllers.count>self.titleMinCount) {
+        
+        // 设置标题居中
+        [self setLabelTitleCenter:label];
+        
+    }
+  
+    
+    // 设置下标的位置
+    [self setUpUnderLine:label];
+    
+    self.selectedLael = label;
+    
+    
+}
+
+
+// 设置下标的位置
+- (void)setUpUnderLine:(UILabel *)label
+{
+
+    
+    self.underLine.width = label.width;
+    self.underLine.height = self.underLineH;
+    self.underLine.y = self.titleHeight - self.underLineH;
+    
+    if (self.underLine.x ==0 ) {
+        
+        self.underLine.x = label.x;
+
+        return;
+    }
+    
+    [UIView animateWithDuration:0.25 animations:^{
+        self.underLine.x = label.x;
+    }];
+    
+}
+
+// 让选中的按钮居中显示
+- (void)setLabelTitleCenter:(UILabel *)label
+{
+    
+    // 设置标题滚动区域的偏移量
+    CGFloat offsetX = label.center.x - SYScreenW * 0.5;
+    
+    if (offsetX < 0) {
+        offsetX = 0;
+    }
+    
+    // 计算下最大的标题视图滚动区域
+    CGFloat maxOffsetX = self.titleScrollView.contentSize.width - SYScreenW;
+    
+    if (maxOffsetX < 0) {
+        maxOffsetX = 0;
+    }
+    
+    if (offsetX > maxOffsetX) {
+        offsetX = maxOffsetX;
+    }
+    
+
+    // 滚动区域
+    [self.titleScrollView setContentOffset:CGPointMake(offsetX, 0) animated:YES];
+    
+   
+}
+
+#pragma mark - UIScrollViewDelegate
+// 减速完成调用
+- (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView
+{
+    CGFloat offsetX = scrollView.contentOffset.x;
+    NSInteger offsetXInt = offsetX;
+    NSInteger screenWInt = SYScreenW;
+    
+    NSInteger extre = offsetXInt % screenWInt;
+    if (extre > SYScreenW * 0.5) {
+        // 往右边移动
+        offsetX = offsetX + (SYScreenW - extre);
+        _isAniming = YES;
+        [self.contentScrollView setContentOffset:CGPointMake(offsetX, 0) animated:YES];
+    }else if (extre < SYScreenW * 0.5 && extre > 0){
+        
+        _isAniming = YES;
+        // 往左边移动
+        offsetX =  offsetX - extre;
+        [self.contentScrollView setContentOffset:CGPointMake(offsetX, 0) animated:YES];
+    }
+    
+    // 获取角标
+    NSInteger i = offsetX / SYScreenW;
+    
+    //选中标题
+    [self selectLabel:self.titleLabels[i]];
+    
+    
+    // 显示对应的控制器
+    [self displayViewController:i];
+    
+    UIViewController *vc = self.childViewControllers[i];
+    
+    // 发出通知
+    [[NSNotificationCenter defaultCenter] postNotificationName:SYTabBarViewControllerDidFinshNote object:vc];
+
+    
+}
+
+//动画完成的时候调用
+- (void)scrollViewDidEndScrollingAnimation:(UIScrollView *)scrollView
+{
+    _isAniming = NO;
+}
+
+//正在滚动的时候调用
+- (void)scrollViewDidScroll:(UIScrollView *)scrollView
+{
+
+        // 点击和动画的时候不需要设置
+        if (_isAniming || self.titleLabels.count == 0) return;
+        
+        // 获取偏移量
+        CGFloat offsetX = scrollView.contentOffset.x;
+        
+        // 获取左边角标
+        NSInteger leftIndex = offsetX / SYScreenW;
+        
+        // 左边按钮
+        UILabel *leftLabel = self.titleLabels[leftIndex];
+        
+        // 右边角标
+        NSInteger rightIndex = leftIndex + 1;
+        
+        // 右边按钮
+        UILabel *rightLabel = nil;
+        
+        if (rightIndex < self.titleLabels.count) {
+            rightLabel = self.titleLabels[rightIndex];
+        }
+        
+    
+        // 设置下标偏移
+        if (_isDelayScroll == NO) { // 延迟滚动，滚动完标题高亮和下标是同事移动的
+            
+            [self setUpUnderLineOffset:offsetX rightLabel:rightLabel leftLabel:leftLabel];
+        }
+        
+        // 记录上一次的偏移量
+        _lastOffsetX = offsetX;
+    
+    
+    CGFloat page = scrollView.contentOffset.x / scrollView.bounds.size.width;
+    
+    /**
+        0 0 0
+        1 0 0
+        
+     **/
+    // 计算左右的缩放比例
+//    CGFloat rightscale = page - leftIndex;
+//    CGFloat leftscal = 1- rightscale;
+    
+    //设置形变
+//    leftLabel.transform = CGAffineTransformMakeScale(leftscal*0.2+1, leftscal*0.2+1);
+//    rightLabel.transform = CGAffineTransformMakeScale(rightscale*0.2+1, rightscale*0.2+1);
+//    
+    //设置标题颜色渐变
+    /**CUSTOMCOLOR(48, 192, 173);*/
+//    leftLabel.textColor = [UIColor colorWithRed:leftscal green:0 blue:0 alpha:1.0];
+//    rightLabel.textColor = [UIColor colorWithRed:rightscale green:192/255.0 blue:173/255.0 alpha:1.0];
+    
+    
+    
+}
+
+@end
+
+
+#pragma mark 作用是为了快速设置一个控件的frame
+@implementation UIView (Frame)
+
+- (CGFloat)height
+{
+    return self.frame.size.height;
+}
+
+- (CGFloat)width
+{
+    return self.frame.size.width;
+}
+
+- (void)setHeight:(CGFloat)height
+{
+    CGRect frame = self.frame;
+    frame.size.height = height;
+    self.frame = frame;
+}
+- (void)setWidth:(CGFloat)width
+{
+    CGRect frame = self.frame;
+    frame.size.width = width;
+    self.frame = frame;
+}
+
+- (CGFloat)x
+{
+    return self.frame.origin.x;
+}
+
+- (void)setX:(CGFloat)x
+{
+    CGRect frame = self.frame;
+    frame.origin.x = x;
+    self.frame = frame;
+}
+
+- (CGFloat)y
+{
+    return self.frame.origin.y;
+}
+
+- (void)setY:(CGFloat)y{
+    CGRect frame = self.frame;
+    frame.origin.y = y;
+    self.frame = frame;
+}
+
+- (void)setCenterX:(CGFloat)centerX
+{
+    CGPoint center = self.center;
+    center.x = centerX;
+    self.center = center;
+}
+
+- (CGFloat)centerX
+{
+    return self.center.x;
+}
+
+- (void)setCenterY:(CGFloat)centerY
+{
+    CGPoint center = self.center;
+    center.y = centerY;
+    self.center = center;
+}
+
+- (CGFloat)centerY
+{
+    return self.center.y;
+}
+
+@end
+

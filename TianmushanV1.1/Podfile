@@ -1,0 +1,15 @@
+# Uncomment this line to define a global platform for your project
+# platform :ios, '9.0'
+
+target 'TianmushanV1.1' do
+  # Uncomment this line if you're using Swift or would like to use dynamic frameworks
+  # use_frameworks!
+
+  # Pods for TianmushanV1.1
+  
+    pod 'AFNetworking', '~> 3.0'
+    pod 'MJRefresh',‘~> 2.5.0’
+    pod 'Toast', '~> 2.4'
+    pod 'SDAutoLayout', '~> 2.1.7'
+    pod 'libqrencode', '~> 3.4.2'
+end

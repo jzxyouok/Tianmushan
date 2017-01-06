@@ -1,0 +1,329 @@
+/**************************************************************************
+ *
+ *  Created by shushaoyong on 2016/10/27.
+ *    Copyright © 2016年 踏潮. All rights reserved.
+ *
+ * 项目名称：浙江踏潮-天目山-h5模版制作软件
+ * 版权说明：本软件属浙江踏潮网络科技有限公司所有，在未获得浙江踏潮网络科技有限公司正式授权
+ *           情况下，任何企业和个人，不能获取、阅读、安装、传播本软件涉及的任何受知
+ *           识产权保护的内容。
+ ***************************************************************************/
+
+#import "ImageClipViewController.h"
+#import "UIView+SY.h"
+#import "UIImage+SY.h"
+#import "MaskView.h"
+
+@interface ImageClipViewController ()<UIScrollViewDelegate>
+//底层的ScrollView
+@property(nonatomic, strong) UIScrollView *scroll;
+//中间显示图片的view
+@property(nonatomic, strong) UIImageView *imageView;
+//上层的遮罩视图
+@property(nonatomic, strong) MaskView *maskView;
+// 裁剪回调
+@property(nonatomic,copy) ResultBlock clipBlock;
+//图片展示视图
+@property(nonatomic, strong) UIView *showView;
+//展示的image
+@property(nonatomic, strong) UIImageView *showImageView;
+@end
+
+@implementation ImageClipViewController
+
+- (void)viewDidLoad{
+    
+    self.view.backgroundColor = [UIColor blackColor];
+    
+    //创建底层的scroll
+    [self createScrollView];
+    //创建遮罩视图
+    [self createMaskView];
+    //创建按钮
+    [self createSelectBtn];
+    //创建标题
+    [self createTitle];
+}
+
+
+/**
+ *  创建标题
+ */
+- (void)createTitle
+{
+    CGFloat width = [UIScreen mainScreen].bounds.size.width;
+    CGFloat height = 100;
+
+    UILabel *label = [[UILabel alloc] init];
+    label.numberOfLines = 0;
+    label.text =@"裁剪图片";
+    label.font = [UIFont systemFontOfSize:18];
+    label.textColor = [UIColor whiteColor];
+    label.textAlignment = NSTextAlignmentCenter;
+    label.frame = CGRectMake(0, 0, width, height);
+    label.backgroundColor = [UIColor clearColor];
+    [self.view addSubview:label];
+    
+}
+
+/**
+ *   创建底层的scroll
+ */
+- (void)createScrollView{
+    self.scroll = [[UIScrollView alloc] initWithFrame:self.view.bounds];
+    self.scroll.delegate = self;
+    self.scroll.clipsToBounds = NO;
+    self.scroll.bounces = NO;
+    self.scroll.showsVerticalScrollIndicator = NO;
+    self.scroll.showsHorizontalScrollIndicator = NO;
+    self.scroll.minimumZoomScale = 0.5;
+    self.scroll.maximumZoomScale = 3.0;
+    //创建显示图片的view
+    [self createImageView];
+    //设置Scroll的ContentSize
+    [self.scroll setFrame:CGRectMake((self.view.width-self.targetSize.width)/2.0, (self.view.height-self.targetSize.height)/2.0, self.targetSize.width, self.targetSize.height)];
+    self.scroll.contentSize = self.imageView.frame.size;
+    self.scroll.contentOffset = CGPointMake((self.scroll.contentSize.width-self.scroll.width)/2.0, (self.scroll.contentSize.height-self.scroll.height)/2.0);
+    [self.view addSubview:self.scroll];
+}
+
+/**
+ *   添加展示图片的视图
+ */
+- (void)createImageView{
+    
+    self.imageView = [[UIImageView alloc] initWithImage:self.clipImage];
+    
+    //等比例显示图片
+    CGFloat width  = [UIScreen mainScreen].bounds.size.width;
+    
+    
+    //如果当前宽度大于屏幕宽度
+    if (self.imageView.size.width>=width) {
+        [self.imageView setFrame:CGRectMake(0, 0, width, self.imageView.height/self.imageView.width * width)];
+    }else{
+        [self.imageView setFrame:CGRectMake(0, 0, self.imageView.width * self.targetSize.height/self.imageView.height, self.targetSize.height)];
+    }
+    
+    if (self.imageView.width<self.targetSize.width) {
+        [self.imageView setFrame:CGRectMake(0, 0, self.targetSize.width, self.imageView.height * self.targetSize.width/self.imageView.width)];
+    }
+    [self.scroll addSubview:self.imageView];
+}
+
+/**
+ *   添加一个遮罩
+ */
+- (void)createMaskView{
+    CAShapeLayer *layer = [[CAShapeLayer alloc] init];
+    UIBezierPath *path = [UIBezierPath bezierPathWithRect:self.view.bounds];
+    [path appendPath:[[UIBezierPath bezierPathWithRect:CGRectMake((self.view.width-self.targetSize.width)/2.0, (self.view.height-self.targetSize.height)/2.0, self.targetSize.width, self.targetSize.height)] bezierPathByReversingPath]];
+    layer.path = path.CGPath;
+    self.maskView = [[MaskView alloc] initWithFrame:self.view.bounds];
+    self.maskView.respondView = self.scroll;
+    self.maskView.backgroundColor = [UIColor colorWithWhite:0.000 alpha:0.7];
+    self.maskView.layer.mask = layer;
+    [self.view addSubview:self.maskView];
+}
+
+/**
+ *   创建选择按钮
+ */
+- (void)createSelectBtn{
+    UIView *view = [[UIView alloc] initWithFrame:CGRectMake(0, self.view.height-64, self.view.width, 64)];
+    view.backgroundColor = [UIColor colorWithWhite:0.000 alpha:0.5];
+    [self.maskView addSubview:view];
+    UIButton *cancelBtn = [[UIButton alloc] initWithFrame:CGRectMake(10, (view.height-44)/2.0, 50, 30)];
+    cancelBtn.backgroundColor = [UIColor grayColor];
+    cancelBtn.titleLabel.font = [UIFont systemFontOfSize:12];
+    [cancelBtn setTitle:@"取消" forState:UIControlStateNormal];
+    cancelBtn.tag = 101;
+    [cancelBtn addTarget:self action:@selector(buttonClick:) forControlEvents:UIControlEventTouchUpInside];
+    [view addSubview:cancelBtn];
+    UIButton *confirmBtn = [[UIButton alloc] initWithFrame:CGRectMake(cancelBtn.right+10, (view.height-44)/2.0, 50, 30)];
+    confirmBtn.tag = 102;
+    confirmBtn.titleLabel.font = [UIFont systemFontOfSize:12];
+    [confirmBtn addTarget:self action:@selector(buttonClick:) forControlEvents:UIControlEventTouchUpInside];
+    confirmBtn.backgroundColor = [UIColor grayColor];
+    [confirmBtn setTitle:@"裁剪" forState:UIControlStateNormal];
+    [view addSubview:confirmBtn];
+}
+
+/**
+ *   设置裁剪回调
+ */
+- (void)setClipResult:(ResultBlock)clipBlock{
+    self.clipBlock = clipBlock;
+}
+
+#pragma mark - scroll delegate
+
+- (UIView *)viewForZoomingInScrollView:(UIScrollView *)scrollView{
+    return self.imageView;
+}
+
+- (void)scrollViewDidZoom:(UIScrollView *)scrollView{
+    self.scroll.contentSize = self.imageView.frame.size;
+}
+
+- (void)scrollViewDidEndDragging:(UIScrollView *)scrollView willDecelerate:(BOOL)decelerate{
+    if (decelerate)
+    {
+        //取消惯性滑动
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [scrollView setContentOffset:scrollView.contentOffset animated:NO];
+        });
+    }
+}
+
+#pragma mark - 裁剪图片
+
+- (void)showClipImage{
+    self.showView = [[UIView alloc] initWithFrame:self.view.bounds];
+    self.showView.backgroundColor = [UIColor blackColor];
+    self.showImageView = [[UIImageView alloc] initWithImage:[self imageAfterClip]];
+    [self.showImageView setFrame:CGRectMake(0, 0, self.targetSize.width, self.targetSize.height)];
+    self.showImageView.center = self.showView.center;
+    [self.showView addSubview:self.showImageView];
+    [self.view addSubview:self.showView];
+    UIButton *cancelBtn = [[UIButton alloc] initWithFrame:CGRectMake(10, self.showView.height-54, 50, 30)];
+    cancelBtn.titleLabel.font = [UIFont systemFontOfSize:12];
+    
+    cancelBtn.backgroundColor = [UIColor grayColor];
+    [cancelBtn setTitle:@"取 消" forState:UIControlStateNormal];
+    cancelBtn.tag = 103;
+    [cancelBtn addTarget:self action:@selector(buttonClick:) forControlEvents:UIControlEventTouchUpInside];
+    [self.showView addSubview:cancelBtn];
+    UIButton *confirmBtn = [[UIButton alloc] initWithFrame:CGRectMake(cancelBtn.right+10, self.showView.height-54, 50, 30)];
+    confirmBtn.backgroundColor = [UIColor grayColor];
+    confirmBtn.tag = 104;
+    confirmBtn.titleLabel.font = [UIFont systemFontOfSize:12];
+    
+    [confirmBtn addTarget:self action:@selector(buttonClick:) forControlEvents:UIControlEventTouchUpInside];
+    [confirmBtn setTitle:@"确 定" forState:UIControlStateNormal];
+    [self.showView addSubview:confirmBtn];
+}
+
+/**
+ *   按要求裁剪图片
+ */
+- (UIImage *)imageAfterClip{
+    
+    //当前图片大小
+    CGSize imageSize = self.imageView.frame.size;
+    
+    CGFloat width  = [UIScreen mainScreen].bounds.size.width;
+    
+    //当前被选中的区域
+    CGRect clipRect = CGRectMake(self.scroll.contentOffset.x, self.scroll.contentOffset.y, self.targetSize.width, self.targetSize.height);
+    
+    
+    CGSize endSize = CGSizeZero;
+    
+    
+    //如果当前图片的宽度 大于屏幕宽度
+    if (imageSize.width>=width) {
+        
+        //实际图片裁剪位置
+        clipRect = CGRectMake(clipRect.origin.x, clipRect.origin.y, clipRect.size.width, clipRect.size.height);
+        
+        endSize = CGSizeMake(width, self.imageView.height/self.imageView.width * width);
+        
+    }else{
+    
+        endSize = CGSizeMake( imageSize.width, imageSize.height);
+
+        //实际图片的倍数
+        if (imageSize.width<=self.targetSize.width ) {
+            
+            
+            if (imageSize.height <= self.targetSize.height) {
+                
+                CGFloat x = self.imageView.center.x - imageSize.width*0.5;
+                CGFloat y = self.imageView.center.y - imageSize.height*0.5;;
+                CGFloat w = imageSize.width;
+                CGFloat h = imageSize.height;
+                
+                clipRect = CGRectMake(x, y, w, h);
+                
+            }else{
+                
+                CGFloat x = self.imageView.center.x - imageSize.width*0.5;
+                CGFloat y = clipRect.origin.y;
+                CGFloat w = imageSize.width;
+                CGFloat h = imageSize.height;
+                
+                clipRect = CGRectMake(x, y, w, h);
+                
+            }
+            
+            
+            
+        }else { //宽度大于目标尺寸
+            
+            if (imageSize.height <= self.targetSize.height) {
+                
+                CGFloat x =  clipRect.origin.x;
+                CGFloat y = self.imageView.center.y - imageSize.height*0.5;;
+                CGFloat w = imageSize.width;
+                CGFloat h = imageSize.height;
+                
+                clipRect = CGRectMake(x, y, w, h);
+                
+            }else{
+                
+                CGFloat x = clipRect.origin.x;
+                CGFloat y = clipRect.origin.y;
+                CGFloat w = imageSize.width;
+                CGFloat h = imageSize.height;
+                
+                clipRect = CGRectMake(x, y, w, h);
+                
+            }
+            
+            
+        }
+        
+    }
+    
+    
+    //裁剪后图片
+    UIImage *image = [[self.clipImage imageByScalingAndCroppingForSize:endSize] clipByRect:clipRect];
+    
+    return image;
+}
+
+
+/**
+ *   按钮的点击方法
+ */
+- (void)buttonClick:(UIButton *)btn{
+    switch (btn.tag) {
+        case 101:{
+            if (self.clipBlock) {
+                self.clipBlock(YES,nil);
+            }
+            [self dismissViewControllerAnimated:YES completion:nil];
+            break;
+        }
+        case 102:{
+            [self showClipImage];
+            break;
+        }
+        case 103:{
+            [self.showView removeFromSuperview];
+            break;
+        }
+        case 104:{
+            if (self.clipBlock) {
+                self.clipBlock(NO,self.showImageView.image);
+            }
+            [self dismissViewControllerAnimated:YES completion:nil];
+            break;
+        }
+        default:
+            break;
+    }
+}
+
+@end

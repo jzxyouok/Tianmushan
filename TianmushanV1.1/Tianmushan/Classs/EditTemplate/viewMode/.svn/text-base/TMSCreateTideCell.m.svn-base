@@ -1,0 +1,176 @@
+/**************************************************************************
+ *
+ *  Created by shushaoyong on 2016/11/23.
+ *    Copyright © 2016年 浙江踏潮流网络科技有限公司. All rights reserved.
+ *
+ * 项目名称：浙江踏潮-天目山-h5模版制作软件
+ * 版权说明：本软件属浙江踏潮网络科技有限公司所有，在未获得浙江踏潮网络科技有限公司正式授权
+ *           情况下，任何企业和个人，不能获取、阅读、安装、传播本软件涉及的任何受知
+ *           识产权保护的内容。
+ *
+ ***************************************************************************/
+
+#import "TMSCreateTideCell.h"
+#import "TMSCreateTideGroup.h"
+#import "TMSCreateTideContentView.h"
+#import "TianmushanAPI.h"
+
+@interface TMSCreateTideCell()
+
+/**title*/
+@property(nonatomic,weak)UILabel *setupL;
+
+/**内容视图*/
+@property(nonatomic,weak)TMSCreateTideContentView *contentV;
+
+/**输入框*/
+@property(nonatomic,weak)UITextField *inputText;
+
+/**底部的线条*/
+@property(nonatomic,weak)CALayer *bottomLine;
+
+@end
+
+@implementation TMSCreateTideCell
+
+
+- (void)setGroup:(TMSCreateTideGroup *)group
+{
+    
+    if (group==nil) {
+        return;
+    }
+    
+    _group = group;
+    
+    self.setupL.text = [NSString stringWithFormat:@"第%@步",group.title];
+    
+    [self.contentV configGroup:group];
+    
+}
+
+static NSString * const identifier = @"TMSCreateTideCell";
+
++ (instancetype)cellWithTableview:(UITableView*)tableview
+{
+    TMSCreateTideCell *cell = [tableview dequeueReusableCellWithIdentifier:identifier];
+    if (cell==nil) {
+        cell = [[TMSCreateTideCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:identifier];
+    }
+    return cell;
+}
+
+- (instancetype)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier
+{
+    if (self = [super initWithStyle:style reuseIdentifier:reuseIdentifier]) {
+        
+        self.contentView.backgroundColor = [UIColor colorWithRed:247/255.0 green:247/255.0 blue:247/255.0 alpha:1.0];
+        
+        self.selectionStyle = UITableViewCellSelectionStyleNone;
+        
+        //步骤
+        UILabel *setupL = [[UILabel alloc] init];
+        setupL.backgroundColor = [UIColor clearColor];
+        setupL.textColor = [UIColor darkGrayColor];
+        setupL.font = [UIFont systemFontOfSize:14];
+        [self.contentView addSubview:setupL];
+        self.setupL = setupL;
+        
+        //内容视图
+        TMSCreateTideContentView *contentV = [[TMSCreateTideContentView alloc] init];
+        [self.contentView addSubview:contentV];
+        self.contentV = contentV;
+        
+        //输入框
+        //添加输入框前面的一个占位view
+        UIView *leftview = [[UIView alloc] initWithFrame:CGRectMake(0, 0, kCellMargin, kCellMargin)];
+        UITextField *inputText = [[UITextField alloc] init];
+        inputText.leftViewMode = UITextFieldViewModeAlways;
+        inputText.leftView = leftview;
+        inputText.backgroundColor = [UIColor whiteColor];
+        inputText.placeholder = @"请输入对应文字";
+        inputText.textColor = [UIColor darkGrayColor];
+        inputText.font = [UIFont systemFontOfSize:13];
+        inputText.clearButtonMode = UITextFieldViewModeWhileEditing;
+        [self.contentView addSubview:inputText];
+        self.inputText = inputText;
+        
+        
+        //添加底部的线条
+        CALayer *bottomLine = [CALayer layer];
+        bottomLine.backgroundColor = [UIColor darkGrayColor].CGColor;
+        [self.contentView.layer addSublayer:bottomLine];
+        self.bottomLine = bottomLine;
+        
+        [self addObservers];
+        
+    }
+    return self;
+}
+
+#pragma mark  监听内容视图 删除按钮 和 添加按钮的点击发出的通知
+- (void)addObservers
+{
+    //监听添加按钮点击
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(addBtnClick) name:kCellContentViewCellAddBtnClickNotification object:nil];
+    
+    //监听删除按钮点击
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(deleteBtnClick:) name:kCellContentViewCellDeleteBtnClickNotification object:nil];
+}
+
+#pragma mark event
+- (void)addBtnClick
+{
+    if ([self.delegate respondsToSelector:@selector(cellWithAddPhotoBtnClick:)]) {
+        [self.delegate cellWithAddPhotoBtnClick:self];
+    }
+}
+
+-(void) deleteBtnClick:(NSNotification*)note
+{
+    if ([note.object isKindOfClass:[NSDictionary class]]) {
+        
+        NSDictionary *info = (NSDictionary*)note.object;
+        
+        if (info[@"group"]!=nil && info[@"item"]!=nil && info[@"indexpath"]!=nil) {
+            
+            if ([self.delegate respondsToSelector:@selector(cell:didDeleteBtnClick:item:indexPath:)]) {
+                
+                [self.delegate cell:self didDeleteBtnClick:info[@"group"] item:info[@"item"] indexPath:info[@"indexpath"]];
+            }
+        }
+    }
+}
+
+- (void)layoutSubviews
+{
+    [super layoutSubviews];
+    
+    CGFloat width = self.frame.size.width;
+    
+    CGFloat height = self.frame.size.height;
+
+    CGFloat titleH = kCellBottomInputH;
+    
+    CGFloat margin = kCellMargin;
+    
+    CGFloat contentw = width - 2*margin;
+    
+    self.setupL.frame = CGRectMake(margin, 0, width-2*margin, titleH);
+    
+    CGFloat contenth = [TMSCreateTideHelper getContentViewHeight:self.group.photos];
+    
+    self.contentV.frame = CGRectMake(margin, CGRectGetMaxY(self.setupL.frame), contentw, contenth?contenth:80);
+    
+    self.inputText.frame = CGRectMake(0, CGRectGetMaxY(self.contentV.frame)+kCellMargin, width, titleH);
+    
+    self.bottomLine.frame = CGRectMake(0, height-1, width, 1);
+    
+}
+
+
+
+
+
+
+@end

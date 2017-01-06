@@ -1,0 +1,120 @@
+/**************************************************************************
+ *
+ *  Created by shushaoyong on 2016/10/27.
+ *    Copyright © 2016年 踏潮. All rights reserved.
+ *
+ * 项目名称：浙江踏潮-天目山-h5模版制作软件
+ * 版权说明：本软件属浙江踏潮网络科技有限公司所有，在未获得浙江踏潮网络科技有限公司正式授权
+ *           情况下，任何企业和个人，不能获取、阅读、安装、传播本软件涉及的任何受知
+ *           识产权保护的内容。
+ ***************************************************************************/
+
+#import <UIKit/UIKit.h>
+typedef enum {
+    UnderLineTypeTop = 0,
+    UnderLineTypeTextBottom,
+    UnderLineTypeBottom
+}UnderLineType;
+
+
+/****以下是默认值可以配置***/
+
+//导航栏的高度
+static CGFloat SYTabBarH = 64;
+
+//collectionViewCell
+static NSString *ID = @"SYTabBarViewControllerCell";
+
+// 标题被点击或者内容滚动完成，会发出这个通知
+static NSString * const SYTabBarViewControllerDidFinshNote = @"SYTabBarViewControllerDidFinshNote";
+
+// 标题重复点击通知
+static NSString * const SYTabBarViewControllerRepeatClickTitleNote = @"SYTabBarViewControllerRepeatClickTitleNote";
+
+
+@interface SYTabBarViewController : UIViewController
+
+/** 整体内容View 包含标题好内容滚动视图 */
+@property (nonatomic, weak) UIView *contentView;
+
+/** 标题滚动视图 */
+@property (nonatomic, weak) UIScrollView *titleScrollView;
+
+/** 下标视图 */
+@property (nonatomic, weak) UIView *underLine;
+
+/** 内容滚动视图 */
+@property (nonatomic, weak) UIScrollView *contentScrollView;
+
+
+/** 是否需要标题背景透明  如果设置为yes 那么内容的视图会穿透标题视图  可以看到内容视图的内容*/
+@property (nonatomic,assign) BOOL isNeedTitleAlpha;
+
+/** 标题view的背景颜色*/
+@property (nonatomic, strong) UIColor *titleScrollViewColor;
+
+/** 标题高度*/
+@property (nonatomic, assign) CGFloat titleHeight;
+
+/** 默认标题颜色*/
+@property (nonatomic, strong) UIColor *normalColor;
+
+/**选中标题颜色*/
+@property (nonatomic, strong) UIColor *selectedColor;
+
+/**标题字体大小*/
+@property (nonatomic, strong) UIFont *titleFont;
+
+/** 默认标题的背景颜色*/
+@property (nonatomic, strong) UIColor *normalTitleBgColor;
+
+// 当设置为文字底部的下划线的时候 文字和下划线的间距
+@property (nonatomic, assign)CGFloat textUnderLineMargin;
+
+/**是否需要下划线*/
+@property (nonatomic, assign) BOOL isShowUnderLine;
+
+/**下划线显示的位置 分别为上面 下面 文字的底部 三个位置*/
+@property (nonatomic, assign) UnderLineType underLineType;
+
+//==========================标题相关属性＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+/** 标题间距 */
+@property (nonatomic, assign) CGFloat titleMargin;
+/** 第一个标题距离屏幕左边间距 */
+@property (nonatomic, assign) CGFloat firstMargin;
+/** 最后一个标题距离屏幕右边的间距 */
+@property (nonatomic, assign) CGFloat lastMargin;
+
+/** 标题的个数最少几个的时候 让标题均匀分布 刚好填充整个屏幕均分 且左右两边的间距 第一个标题和最后一个标题的间距可以自己设置
+ 即： 第一个标题距离屏幕左边的间距  最后一个标题距离屏幕右边的间距   要达到这样的效果 必须在设置此属性之前 设置 firstMargin lastMargin
+ */
+@property (nonatomic, assign) NSInteger titleMinCount;
+
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+
+/**是否延迟滚动下标 意思是等动画停止了 下划线再移动到标题的下面 同时带有弹簧效果*/
+@property (nonatomic, assign) BOOL isDelayScroll;
+
+/**下划线的颜色*/
+@property (nonatomic, strong) UIColor *underLineColor;
+
+/**下划线的高度*/
+@property (nonatomic, assign) CGFloat underLineH;
+
+/**重新加载数据*/
+- (void)reload;
+
+@end
+
+
+//作用是为了快速设置一个控件的frame
+@interface UIView (Frame)
+@property (nonatomic, assign) CGFloat centerX;
+@property (nonatomic, assign) CGFloat centerY;
+@property (nonatomic, assign) CGFloat x;
+@property (nonatomic, assign) CGFloat y;
+@property (nonatomic, assign) CGFloat width;
+@property (nonatomic, assign) CGFloat height;
+@end
+
+

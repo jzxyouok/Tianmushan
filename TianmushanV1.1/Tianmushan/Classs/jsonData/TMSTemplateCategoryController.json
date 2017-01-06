@@ -1,0 +1,60 @@
+{
+    "code" : 0,
+    "msg" : "查询模板分类信息成功！",
+    "count" : 8,
+    "rst" : {
+        "catalog" : [
+                     {
+                     "num" : 2,
+                     "nick" : "热门",
+                     "name" : "hot",
+                     "imageurl" : "http:\/\/cb.adwangchao.com\/template\/png\/hot.png"
+                     },
+                     {
+                     "num" : 2,
+                     "nick" : "最新",
+                     "name" : "last",
+                     "imageurl" : "http:\/\/cb.adwangchao.com\/template\/png\/last.png"
+                     },
+                     {
+                     "num" : 1,
+                     "nick" : "相册",
+                     "name" : "photo",
+                     "imageurl" : "http:\/\/cb.adwangchao.com\/template\/png\/photo.png"
+                     },
+                     {
+                     "num" : 51,
+                     "nick" : "请柬",
+                     "name" : "invitation",
+                     "imageurl" : "http:\/\/cb.adwangchao.com\/template\/png\/invitation.png"
+                     },
+                     {
+                     "num" : 2,
+                     "nick" : "贺卡",
+                     "name" : "greeting",
+                     "imageurl" : "http:\/\/cb.adwangchao.com\/template\/png\/greeting.png"
+                     },
+                     {
+                     "num" : 2,
+                     "nick" : "游戏",
+                     "name" : "games",
+                     "imageurl" : "http:\/\/cb.adwangchao.com\/template\/png\/games.png"
+                     },
+                     {
+                     "num" : 2,
+                     "nick" : "活动",
+                     "name" : "activity",
+                     "imageurl" : "http:\/\/cb.adwangchao.com\/template\/png\/activity.png"
+                     },
+                     {
+                     "num" : 0,
+                     "nick" : "宣传",
+                     "name" : "publicity",
+                     "imageurl" : "http:\/\/cb.adwangchao.com\/template\/png\/publicity.png"
+                     }
+                     ],
+        "clientId" : null,
+        "refreshId" : null,
+        "tokenId" : null
+    }
+}
